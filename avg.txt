@@ -1,3 +1,5 @@
+#Implement Min, Max, Sum, and Average operations using Parallel Reduction in OpenMP.
+
 cpp_code="""
 #include <iostream>
 #include <omp.h>

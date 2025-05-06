@@ -1,3 +1,6 @@
+#2. Write a program to implement Parallel Bubble Sort and Parallel Merge Sort using OpenMP. 
+Use existing sorting algorithms and measure the performance of sequential and parallel 
+algorithms. Compare the speedup obtained due to parallelism.
 #Bubble Sort
 #include <cstdlib>
 #include <ctime>

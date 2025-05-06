@@ -1,0 +1,154 @@
+cpp_code="""
+#include <iostream>
+#include <omp.h>
+#include <time.h>
+using namespace std;
+
+int sum_Reduction_Parallel(int data[], int n) {
+    int sum = 0;
+    #pragma omp parallel for reduction(+: sum)
+    for (int i = 0; i < n; i++) {
+        sum += data[i];
+    }
+    return sum;
+}
+
+int sum_Reduction_Serial(int data[], int n) {
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        sum += data[i];
+    }
+    return sum;
+}
+
+void min_Reduction_Parallel(int data[], int n) {
+    int min_value = data[0];
+    #pragma omp parallel for reduction(min: min_value)
+    for (int i = 1; i < n; i++) {
+        if (data[i] < min_value) {
+            min_value = data[i];
+        }
+    }
+    cout << "Minimum value: " << min_value << endl;
+}
+
+void min_Reduction_Serial(int data[], int n) {
+    int min_value = data[0];
+    for (int i = 1; i < n; i++) {
+        if (data[i] < min_value) {
+            min_value = data[i];
+        }
+    }
+    cout << "Minimum value: " << min_value << endl;
+}
+
+void max_Reduction_Parallel(int data[], int n) {
+    int max_value = data[0];
+    #pragma omp parallel for reduction(max: max_value)
+    for (int i = 1; i < n; i++) {
+        if (data[i] > max_value) {
+            max_value = data[i];
+        }
+    }
+    cout << "Maximum value: " << max_value << endl;
+}
+
+void max_Reduction_Serial(int data[], int n) {
+    int max_value = data[0];
+    for (int i = 1; i < n; i++) {
+        if (data[i] > max_value) {
+            max_value = data[i];
+        }
+    }
+    cout << "Maximum value: " << max_value << endl;
+}
+
+int main() {
+    int n = 560000, sum;
+    int data[n];
+    clock_t start, finish;
+    double processing_time_parallel, processing_time_serial;
+    float avg = 0;
+
+    // Initialize the data array
+    for (int i = 0; i < n; i++) {
+        data[i] = i + 1;
+    }
+
+    // Parallel Sum
+    start = clock();
+    cout << "Sum: " << sum_Reduction_Parallel(data, n) << endl;
+    finish = clock();
+    processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for sum(Parallel): " << processing_time_parallel << endl;
+
+    // Serial Sum
+    start = clock();
+    cout << "Sum: " << sum_Reduction_Serial(data, n) << endl;
+    finish = clock();
+    processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for sum(Serial): " << processing_time_serial << endl;
+    cout << "\nSpeed Up for Sum: " << (processing_time_serial / processing_time_parallel) << endl << endl;
+
+    // Parallel Min
+    start = clock();
+    min_Reduction_Parallel(data, n);
+    finish = clock();
+    processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for min(Parallel): " << processing_time_parallel << endl;
+
+    // Serial Min
+    start = clock();
+    min_Reduction_Serial(data, n);
+    finish = clock();
+    processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for min(Serial): " << processing_time_serial << endl;
+    cout << "\nSpeed Up for min: " << (processing_time_serial / processing_time_parallel) << endl << endl;
+
+    // Parallel Max
+    start = clock();
+    max_Reduction_Parallel(data, n);
+    finish = clock();
+    processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for max(Parallel): " << processing_time_parallel << endl;
+
+    // Serial Max
+    start = clock();
+    max_Reduction_Serial(data, n);
+    finish = clock();
+    processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for max(Serial): " << processing_time_serial << endl;
+    cout << "\nSpeed Up for max: " << (processing_time_serial / processing_time_parallel) << endl << endl;
+
+    // Parallel Average
+    start = clock();
+    sum = sum_Reduction_Parallel(data, n);
+    avg = sum / float(n);
+    cout << "Average: " << avg << endl;
+    finish = clock();
+    processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for avg(Parallel): " << processing_time_parallel << endl;
+
+    // Serial Average
+    start = clock();
+    sum = sum_Reduction_Serial(data, n);
+    avg = sum / float(n);
+    cout << "Average: " << avg << endl;
+    finish = clock();
+    processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "Processing time for avg(Serial): " << processing_time_serial << endl;
+	cout << "\nSpeed Up for avg: " << (processing_time_serial / processing_time_parallel) << endl << endl;
+
+    return 0;
+}
+
+"""
+with open ("hpc1.cpp","w") as f:
+  f.write(cpp_code)
+
+!g++ hpc1.cpp -o hpc1
+!./hpc1
+
+
+g++ main.cpp -o main -fopenmp
+./main

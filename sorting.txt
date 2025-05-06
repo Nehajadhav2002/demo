@@ -1,0 +1,168 @@
+#Bubble Sort
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <omp.h>
+
+#define SIZE 85000
+
+using namespace std;
+
+// Sequential Bubble Sort
+void bubbleSortSequential(int arr[], int n) {
+  for (int i = 0; i < n - 1; ++i) {
+    for (int j = 0; j < n - 1 - i; ++j) {
+      if (arr[j] > arr[j + 1]) {
+        swap(arr[j], arr[j + 1]);
+      }
+    }
+  }
+}
+
+// Parallel Bubble Sort using OpenMP (not truly parallel-safe)
+void bubbleSortParallel(int arr[], int n) {
+#pragma omp parallel for
+  for (int i = 0; i < n - 1; ++i) {
+    for (int j = 0; j < n - 1 - i; ++j) {
+      if (arr[j] > arr[j + 1]) {
+        swap(arr[j], arr[j + 1]);
+      }
+    }
+  }
+}
+
+int main() {
+  int arr[SIZE], arrSeq[SIZE], arrPar[SIZE];
+
+  // Generate random numbers
+  for (int i = 0; i < SIZE; ++i) {
+    arr[i] = rand() % 85000;
+    arrSeq[i] = arr[i];
+    arrPar[i] = arr[i];
+  }
+
+  // Time sequential bubble sort
+  clock_t startSeq = clock();
+  bubbleSortSequential(arrSeq, SIZE);
+  clock_t endSeq = clock();
+  double timeSeq = double(endSeq - startSeq) / CLOCKS_PER_SEC;
+
+  // Time parallel bubble sort
+  clock_t startPar = clock();
+  bubbleSortParallel(arrPar, SIZE);
+  clock_t endPar = clock();
+  double timePar = double(endPar - startPar) / CLOCKS_PER_SEC;
+
+  // Calculate speedup
+  double speedup = timePar > 0 ? timeSeq / timePar : 0;
+
+  cout << "Sequential Time: " << timeSeq << " seconds\n";
+  cout << "Parallel Time: " << timePar << " seconds\n";
+  cout << "Speedup: " << speedup << "\n";
+
+  return 0;
+}
+
+g++ main.cpp -o main -fopenmp
+./main
+
+#Merge Sort
+#include <iostream>
+#include <omp.h>
+#include <ctime>
+#include <cstdlib>
+
+#define SIZE 100000
+
+using namespace std;
+
+// Merge function to merge two subarrays
+void merge(int arr[], int left, int mid, int right) {
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
+
+    int* L = new int[n1];
+    int* R = new int[n2];
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[left + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[mid + 1 + j];
+
+    int i = 0, j = 0, k = left;
+
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j])
+            arr[k++] = L[i++];
+        else
+            arr[k++] = R[j++];
+    }
+
+    while (i < n1)
+        arr[k++] = L[i++];
+    while (j < n2)
+        arr[k++] = R[j++];
+
+    delete[] L;
+    delete[] R;
+}
+
+// Sequential Merge Sort
+void mergeSortSequential(int arr[], int left, int right) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+        mergeSortSequential(arr, left, mid);
+        mergeSortSequential(arr, mid + 1, right);
+        merge(arr, left, mid, right);
+    }
+}
+
+// Parallel Merge Sort using OpenMP
+void mergeSortParallel(int arr[], int left, int right) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            mergeSortParallel(arr, left, mid);
+            #pragma omp section
+            mergeSortParallel(arr, mid + 1, right);
+        }
+        merge(arr, left, mid, right);
+    }
+}
+
+int main() {
+    int arr[SIZE], arrSeq[SIZE], arrPar[SIZE];
+
+    // Fill the arrays with random values
+    for (int i = 0; i < SIZE; ++i) {
+        arr[i] = rand() % 100000;
+        arrSeq[i] = arr[i];
+        arrPar[i] = arr[i];
+    }
+
+    // Sequential Merge Sort timing
+    clock_t startSeq = clock();
+    mergeSortSequential(arrSeq, 0, SIZE - 1);
+    clock_t endSeq = clock();
+    double timeSeq = double(endSeq - startSeq) / CLOCKS_PER_SEC;
+
+    // Parallel Merge Sort timing
+    clock_t startPar = clock();
+    mergeSortParallel(arrPar, 0, SIZE - 1);
+    clock_t endPar = clock();
+    double timePar = double(endPar - startPar) / CLOCKS_PER_SEC;
+
+    // Calculate speedup
+    double speedup = timePar > 0 ? timeSeq / timePar : 0;
+
+    cout << "Sequential Time: " << timeSeq << " seconds\n";
+    cout << "Parallel Time: " << timePar << " seconds\n";
+    cout << "Speedup: " << speedup << "\n";
+
+    return 0;
+}
+g++ main.cpp -o main -fopenmp
+./main

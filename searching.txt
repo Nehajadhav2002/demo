@@ -1,0 +1,235 @@
+#DFS
+#include <ctime> // For timing
+#include <iostream>
+#include <omp.h>
+#include <stack>
+#include <vector>
+using namespace std;
+
+class Graph {
+public:
+  int V;                   // Number of vertices
+  vector<vector<int>> adj; // Adjacency list
+  Graph(int V);
+  void addEdge(int v, int w);
+  void DFS_Serial(int start);
+  void DFS_Parallel(int start);
+};
+
+Graph::Graph(int V) {
+  this->V = V;
+  adj.resize(V);
+}
+
+void Graph::addEdge(int v, int w) {
+  adj[v].push_back(w);
+  adj[w].push_back(v); // Assuming undirected graph
+}
+
+void Graph::DFS_Serial(int start) {
+  vector<bool> visited(V, false);
+  stack<int> s;
+  s.push(start);
+  while (!s.empty()) {
+    int node = s.top();
+    s.pop();
+    if (!visited[node]) {
+      // cout << node << " ";
+      visited[node] = true;
+    }
+    for (auto neighbor : adj[node]) {
+      if (!visited[neighbor]) {
+        s.push(neighbor);
+      }
+    }
+  }
+}
+
+void Graph::DFS_Parallel(int start) {
+  vector<bool> visited(V, false);
+  stack<int> s;
+  s.push(start);
+
+#pragma omp parallel
+  {
+    while (true) {
+      int node = -1;
+#pragma omp critical
+      {
+        if (!s.empty()) {
+          node = s.top();
+          s.pop();
+        }
+      }
+
+      if (node == -1) {
+        break; // Exit the loop when no more nodes are available
+      }
+
+      if (!visited[node]) {
+        // cout << node << " ";
+        visited[node] = true;
+      }
+
+// Parallelize the loop to explore neighbors
+#pragma omp parallel for
+      for (size_t i = 0; i < adj[node].size(); i++) {
+        int neighbor = adj[node][i];
+        if (!visited[neighbor]) {
+#pragma omp critical
+          s.push(neighbor);
+        }
+      }
+    }
+  }
+}
+
+int main() {
+  int V = 10000; // Large graph size
+  clock_t start, finish;
+  double processing_time_parallel, processing_time_serial;
+  Graph g(V);
+
+  // Adding edges to form a connected graph
+  for (int i = 0; i < V - 1; i++) {
+    g.addEdge(i, i + 1);
+  }
+
+  double start_time, end_time;
+
+  // Serial DFS Timing
+  start = clock();
+  g.DFS_Serial(0);
+  finish = clock();
+  processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+  cout << "\nSerial DFS Time: " << processing_time_serial << " seconds" << endl;
+
+  // Parallel DFS Timing
+  start = clock();
+  g.DFS_Parallel(0);
+  finish = clock();
+  processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+  cout << "\nParallel DFS Time: " << processing_time_parallel << " seconds"
+       << endl;
+
+  // Calculate Speedup
+  cout << "Speedup: " << (processing_time_serial / processing_time_parallel)
+       << endl;
+
+  return 0;
+}
+
+#BFS
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+using namespace std;
+
+class Graph {
+public:
+    int V; // Number of vertices
+    vector<vector<int>> adj; // Adjacency list
+    Graph(int V);
+    void addEdge(int v, int w);
+    void BFS_Serial(int start);
+    void BFS_Parallel(int start);
+};
+
+Graph::Graph(int V) {
+    this->V = V;
+    adj.resize(V);
+}
+
+void Graph::addEdge(int v, int w) {
+    adj[v].push_back(w);
+    adj[w].push_back(v); // Assuming undirected graph
+}
+
+void Graph::BFS_Serial(int start) {
+    vector<bool> visited(V, false);
+    queue<int> q;
+    q.push(start);
+    visited[start] = true;
+    while (!q.empty()) {
+        int node = q.front();
+        q.pop();
+        for (auto neighbor : adj[node]) {
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                q.push(neighbor);
+            }
+        }
+    }
+}
+
+void Graph::BFS_Parallel(int start) {
+    vector<bool> visited(V, false);
+    queue<int> q;
+    q.push(start);
+    visited[start] = true;
+
+    #pragma omp parallel
+    {
+        while (true) {
+            int node = -1;
+            // Critical section to safely get the next node from the queue
+            #pragma omp critical
+            {
+                if (!q.empty()) {
+                    node = q.front();
+                    q.pop();
+                }
+            }
+
+            if (node == -1) {
+                break; // Exit the loop when no more nodes are available
+            }
+
+            // Parallelize the iteration over the neighbors of the node
+            #pragma omp parallel for
+            for (size_t i = 0; i < adj[node].size(); i++) {
+                int neighbor = adj[node][i];
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    // Critical section to safely add the neighbor to the queue
+                    #pragma omp critical
+                    q.push(neighbor);
+                }
+            }
+        }
+    }
+}
+
+int main() {
+    int V = 900000; // Large graph size
+    clock_t start, finish;
+    double processing_time_parallel, processing_time_serial;
+    Graph g(V);
+
+    // Adding edges to form a connected graph
+    for (int i = 0; i < V - 1; i++) {
+        g.addEdge(i, i + 1);
+    }
+
+    // Serial BFS Timing
+    start = clock();
+    g.BFS_Serial(0);
+    finish = clock();
+    processing_time_serial = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "\nSerial BFS Time: " << processing_time_serial << " seconds" << endl;
+
+    // Parallel BFS Timing
+    start = clock();
+    g.BFS_Parallel(0);
+    finish = clock();
+    processing_time_parallel = double(finish - start) / CLOCKS_PER_SEC;
+    cout << "\nParallel BFS Time: " << processing_time_parallel << " seconds" << endl;
+
+    // Calculate Speedup
+    cout << "Speedup: " << (processing_time_serial / processing_time_parallel) << endl;
+
+    return 0;
+}
+g++ main.cpp -o main -fopenmp
+./main
